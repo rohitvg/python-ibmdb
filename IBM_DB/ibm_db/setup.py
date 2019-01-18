@@ -161,7 +161,16 @@ if (('IBM_DB_HOME' not in os.environ) and ('IBM_DB_DIR' not in os.environ) and (
         url = 'https://public.dhe.ibm.com/ibmdl/export/pub/software/data/db2/drivers/odbc_cli/' + cliFileName
         sys.stdout.write("Downloading %s\n" % (url))
         sys.stdout.flush();
-        file_stream = BytesIO(request.urlopen(url).read())
+        try:
+            file_stream = BytesIO(request.urlopen(url).read())
+        except Exception as e:
+            if (sys.version_info >= (3, )) and 'certificate verify failed' in str(e):
+                # For Python 3x, if download failed because of certificate verification, retry without certificate verification
+                    warnings.warn('Certificate verification failed while attempting to download from {}. Retrying without certificate verification'.format(url))
+                    import ssl
+                    file_stream = BytesIO(request.urlopen(url, context=ssl._create_unverified_context()).read())
+                else:
+                    raise e
         if (os_ == 'win'):
             if sys.version_info[0:2] <= (2, 5):
                 sys.stdout.write("Auto installation of clidriver for Python Version %i.%i on Window platform is currently not supported \n" % (sys.version_info[0:2]))
